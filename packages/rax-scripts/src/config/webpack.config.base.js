@@ -4,21 +4,26 @@ const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const colors = require('chalk');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const RaxWebpackPlugin = require('rax-webpack-plugin');
-const WatchMissingNodeModulesPlugin = require('watch-missing-node-modules-webpack-plugin');
 const webpack = require('webpack');
 
 const pathConfig = require('./path.config');
-const babelConfig = require('./babel.config');
 
 // Webpack uses `publicPath` to determine where the app is being served from.
 // In development, we always serve from the root. This makes config easier.
-const publicPath = '/';
+const publicPath = process.env.PUBLIC_PATH || '/';
 // `publicUrl` is just like `publicPath`, but we will provide it to our app
 // as %PUBLIC_URL% in `index.html` and `process.env.PUBLIC_URL` in JavaScript.
 // Omit trailing slash as %PUBLIC_PATH%/xyz looks better than %PUBLIC_PATH%xyz.
-const publicUrl = '';
+const publicUrl = publicPath.replace(/\/$/, '');
+
+const babelOptions = {
+  presets: [require.resolve('babel-preset-es2015'), require.resolve('babel-preset-rax')],
+  plugins: [require.resolve('rax-hot-loader/babel')],
+};
 
 module.exports = {
+  mode: process.env.NODE_ENV,
+
   context: process.cwd(),
   // Compile target should "web" when use hot reload
   target: 'web',
@@ -40,20 +45,20 @@ module.exports = {
     // containing code from all our entry points, and the Webpack runtime.
     filename: 'js/[name].js',
     // This is the URL that app is served from. We use "/" in development.
-    publicPath: publicPath
+    publicPath: publicPath,
   },
   resolve: {
-    extensions: ['.js', '.json', '.jsx']
+    extensions: ['.js', '.json', '.jsx', '.html', '.vue'],
   },
   plugins: [
     new RaxWebpackPlugin({
       target: 'bundle',
-      externalBuiltinModules: false
+      externalBuiltinModules: false,
     }),
     // Generates an `index.html` file with the <script> injected.
     new HtmlWebpackPlugin({
       inject: true,
-      template: pathConfig.appHtml
+      template: pathConfig.appHtml,
     }),
     // Makes some environment variables available to the JS code, for example:
     // if (process.env.NODE_ENV === 'development') { ... }. See `./env.js`.
@@ -66,8 +71,8 @@ module.exports = {
         // For example, <img src={process.env.PUBLIC_URL + '/img/logo.png'} />.
         // This should only be used as an escape hatch. Normally you would put
         // images into the `src` and `import` them in code to get their paths.
-        PUBLIC_URL: JSON.stringify(publicUrl)
-      }
+        PUBLIC_URL: JSON.stringify(publicUrl),
+      },
     }),
     // This is necessary to emit hot updates (currently CSS only):
     // new webpack.HotModuleReplacementPlugin(),
@@ -75,11 +80,6 @@ module.exports = {
     // a plugin that prints an error when you attempt to do this.
     // See https://github.com/facebookincubator/create-react-app/issues/240
     new CaseSensitivePathsPlugin(),
-    // If you require a missing module and then `npm install` it, you still have
-    // to restart the development server for Webpack to discover it. This plugin
-    // makes the discovery automatic so you don't have to restart.
-    // See https://github.com/facebookincubator/create-react-app/issues/186
-    new WatchMissingNodeModulesPlugin(pathConfig.appNodeModules),
     // show webpakc build progress
     new webpack.ProgressPlugin(function(percentage, msg) {
       const stream = process.stderr;
@@ -92,12 +92,6 @@ module.exports = {
         console.log(colors.green('webpack: bundle build is now finished.'));
       }
     }),
-    new webpack.LoaderOptionsPlugin({
-      // test: /\.xxx$/, // may apply this only for some modules
-      options: {
-        babel: babelConfig
-      }
-    })
   ],
   module: {
     rules: [
@@ -106,8 +100,8 @@ module.exports = {
         exclude: /(node_modules|bower_components)/,
         use: [
           {
-            loader: 'ts-loader'
-          }
+            loader: 'ts-loader',
+          },
         ],
       },
       {
@@ -115,16 +109,34 @@ module.exports = {
         exclude: /(node_modules|bower_components)/,
         use: [
           {
-            loader: 'babel-loader'
-          }
+            loader: 'babel-loader',
+            options: babelOptions,
+          },
         ],
+      },
+      {
+        test: /\.(vue|html)$/,
+        use: [
+          {
+            loader: 'sfc-loader',
+            options: {
+              builtInRuntime: false,
+              preserveWhitespace: false,
+              module: 'commonjs',
+              // weexGlobalComponents: {
+              //   button: 'rax-button'
+              // },
+            },
+          },
+        ],
+        exclude: [pathConfig.appHtml],
       },
       {
         test: /\.css$/,
         use: [
           {
-            loader: 'stylesheet-loader'
-          }
+            loader: 'stylesheet-loader',
+          },
         ],
       },
       // JSON is not enabled by default in Webpack but both Node and Browserify
@@ -133,8 +145,8 @@ module.exports = {
         test: /\.json$/,
         use: [
           {
-            loader: 'json-loader'
-          }
+            loader: 'json-loader',
+          },
         ],
       },
       // load inline images using image-source-loader for Image
@@ -142,10 +154,10 @@ module.exports = {
         test: /\.(png|jpe?g|gif)$/i,
         use: [
           {
-            loader: 'image-source-loader'
-          }
+            loader: 'image-source-loader',
+          },
         ],
-      }
-    ]
-  }
+      },
+    ],
+  },
 };

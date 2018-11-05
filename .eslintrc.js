@@ -146,7 +146,6 @@ module.exports = {
      */
     "import/newline-after-import": "error",
     "import/no-duplicates": "error",
-    "import/no-unresolved": "error",
     "import/no-extraneous-dependencies": [
       "error",
       {
@@ -155,7 +154,10 @@ module.exports = {
           "**/scripts/*.js",
           "**/__tests__/*.js",
           "**/__tests__/**/*.js",
-          '**/*.config.js'
+          '**/*.config.js',
+          "**/config/*.js",
+          "**/*.conf.js",
+          "**/tests/*.test.js"
         ]
       }
     ],
@@ -184,7 +186,7 @@ module.exports = {
     "react/no-children-prop": "error",
     "react/no-did-mount-set-state": "error",
     "react/no-did-update-set-state": "error",
-    "react/no-unknown-property": "error",
+    "react/no-unknown-property": "off",
     "react/style-prop-object": "error",
     "react/react-in-jsx-scope": "error",
     "react/self-closing-comp": "error",
